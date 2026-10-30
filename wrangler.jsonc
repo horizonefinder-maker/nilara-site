@@ -1,0 +1,13 @@
+// nilarahills.com — the same Cloudflare Worker ChatGPT created ("hf-nilara-hills"), now serving the files in dist/.
+// `npm run deploy` builds and checks the site, then uploads it. The custom domain nilarahills.com stays attached.
+{
+  "name": "hf-nilara-hills",
+  "compatibility_date": "2026-10-22",
+  "assets": {
+    "directory": "./dist",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "404-page"
+  },
+  "routes": [{ "pattern": "nilarahills.com", "custom_domain": true }],
+  "observability": { "enabled": true }
+}

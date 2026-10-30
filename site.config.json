@@ -1,0 +1,44 @@
+{
+  "_help": "Fill the empty fields, then run: npm run build. Empty fields are left off the website and out of Google's data (the build lists them). Keep name, address and phone exactly the same as on your Google Business Profile.",
+  "siteUrl": "https://nilarahills.com",
+  "name": "Nilara Hills Resort",
+  "shortName": "Nilara Hills",
+  "operator": "Horizon Finder India",
+  "operatorUrl": "https://horizonfinderindia.com",
+  "phone": "+919539106103",
+  "whatsapp": "+919539106103",
+  "email": "info@horizonfinderindia.com",
+  "address": {
+    "street": "Kallumottamkunnu, Mananthavady P.O.",
+    "locality": "Mananthavady",
+    "district": "Wayanad",
+    "region": "Kerala",
+    "postalCode": "670645",
+    "country": "IN"
+  },
+   "geo": {
+    "lat": "11.8220093",
+    "lng": "75.9996925"
+  },
+  "mapsUrl": "https://maps.app.goo.gl/q4y4C6EipjYLpNAW8",
+  "checkIn": "14:00",
+  "checkOut": "11:00",
+  "showPrices": true,
+  "priceFrom": 6500,
+  "priceRange": "₹6,500 – ₹7,500 per night",
+  "bookingUrl": "https://availability.horizonfinderindia.com/",
+  "instagram": "",
+  "facebook": "",
+  "distanceFromTown": "2.5 km",
+  "rates": {
+    "_help": "Per night, breakfast included. Shown on the Cottages page and in Google data. Change here, then npm run deploy.",
+    "cottageAc": 7500,
+    "cottageNonAc": 7000,
+    "aFrame": 6500,
+    "extraAdultCottage": 800,
+    "extraChildCottage": 500,
+    "extraAdultAFrame": 1000,
+    "extraChildAFrame": 600,
+    "campfire": 500
+  }
+}

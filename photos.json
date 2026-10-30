@@ -1,0 +1,18 @@
+{
+  "_help": "Each photo: the original file in photos/ (fetched from the current site by `npm run photos`, or your own), the SEO file name it gets on the website, and the description Google reads. Add a photo by dropping it in photos/ and adding a line here.",
+  "photos": [
+    { "key": "hero",     "file": "90E5142C-B872-4B07-9B8D-43A9803DBF1D.png", "slug": "nilara-hills-resort-mananthavady-wayanad",       "alt": "Nilara Hills Resort in Mananthavady, Wayanad, with cottages set among green hills", "caption": "Nilara Hills Resort, Mananthavady, Wayanad" },
+    { "key": "arrival",  "file": "AAFA25D4-D4D7-4456-B5B6-22A307D28F51.png", "slug": "nilara-hills-resort-entrance-wayanad",           "alt": "Entrance and garden at Nilara Hills Resort, Wayanad", "caption": "Arriving at Nilara Hills" },
+    { "key": "room1",    "file": "IMG_9172.JPG",                             "slug": "wayanad-cottage-room-nilara-hills",              "alt": "Wooden interior of a two-bedroom cottage at Nilara Hills, Wayanad, with a seating area", "caption": "Inside a two-bedroom cottage" },
+    { "key": "room2",    "file": "IMG_9175.JPG",                             "slug": "cottage-bedroom-mananthavady-nilara-hills",      "alt": "Double bed in a cottage bedroom at Nilara Hills Resort, Mananthavady", "caption": "A cottage bedroom" },
+    { "key": "pool",     "file": "AFAF7D53-F906-4068-9124-C6F1142E9D08.png", "slug": "resort-with-swimming-pool-wayanad-nilara-hills", "alt": "Swimming pool and landscaped grounds at Nilara Hills, a resort with a pool in Wayanad", "caption": "The pool and gardens" },
+    { "key": "poolNight","file": "DCD211E7-E116-4DC9-806F-B92AE134436B.png", "slug": "nilara-hills-pool-at-night-wayanad",            "alt": "Lit swimming pool at Nilara Hills Resort, Wayanad, in the evening", "caption": "The pool after dark" },
+    { "key": "terrace",  "file": "F4D1BC24-06FC-42F8-8647-3BBBE2842688.png", "slug": "nilara-hills-cottages-terrace-mananthavady",     "alt": "Cottages and sunny terrace at Nilara Hills, Mananthavady", "caption": "Cottages and terrace" },
+    { "key": "pool2",    "file": "051FE1F2-5657-48AB-8A54-E227BA1D2CA6.png", "slug": "swimming-pool-greenery-nilara-hills-wayanad",   "alt": "Swimming pool surrounded by tropical greenery at Nilara Hills, Wayanad", "caption": "Pool among the greenery" },
+    { "key": "dining",   "file": "B8DF552D-8FD0-4280-9B3B-83CA03A8BB55.png", "slug": "outdoor-dining-terrace-nilara-hills",           "alt": "Outdoor dining terrace for meals at Nilara Hills Resort, Wayanad", "caption": "Outdoor dining" },
+    { "key": "night",    "file": "1B6CC934-A86F-469F-9DE5-B4AB91C38263.png", "slug": "nilara-hills-resort-wayanad-by-night",          "alt": "Nilara Hills Resort, Wayanad, lit up at night", "caption": "The resort by night" },
+    { "key": "garden",   "file": "37935759-42C9-4885-91F4-1B81BBBC0797.png", "slug": "garden-pool-evening-nilara-hills",              "alt": "Garden and pool area in the evening at Nilara Hills, Mananthavady", "caption": "Garden and pool in the evening" },
+    { "key": "logo",     "file": "nilarahills-logo.png",                     "slug": "nilara-hills-resort-logo", "alt": "Nilara Hills Resort logo", "caption": "", "logo": true },
+    { "key": "hfLogo",   "file": "horizon-finder-logo.png",                  "slug": "horizon-finder-india-logo", "alt": "Horizon Finder India logo", "caption": "", "logo": true }
+  ]
+}
