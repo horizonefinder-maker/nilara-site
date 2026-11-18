@@ -75,6 +75,33 @@ for (const file of pages) {
     if (!existsSync(target)) bad(path, `link to ${href} leads nowhere`);
   }
   if (!sitemap.includes(`<loc>${BASE}${path}</loc>`)) bad(path, 'not in sitemap.xml');
+  // Wording: Nilara Hills is a boutique resort.
+  if (/nature resort/i.test(html)) bad(path, 'says "nature resort" — Nilara Hills is a boutique resort');
+  if (/<meta name="robots" content="noindex/.test(html)) bad(path, 'is a draft preview (noindex) — rebuild without --drafts before deploying');
+  // Blog posts: the on-page checks for an informational page (on-page optimizer, blog branch).
+  if (/^\/blog\/[^/]+\/$/.test(path)) {
+    const body = one(/<div class="post-body">([\s\S]*?)<\/div>\s*(?:<section class="post-faq"|<section class="post-sources")/) || '';
+    if (!body) bad(path, 'post body not found');
+    if (/\[ASHWIN-LINE\]|TODO-CONFIRM|class="todo"/.test(html)) bad(path, 'a placeholder or TODO-CONFIRM is still on the live page');
+    try {
+      const g = JSON.parse(one(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/))['@graph'];
+      const post = g.find((x) => x['@type'] === 'BlogPosting');
+      if (!post?.datePublished || !post.headline) bad(path, 'no BlogPosting data with headline and datePublished');
+      const faq = g.find((x) => x['@type'] === 'FAQPage');
+      if (faq) for (const q of faq.mainEntity) if (!html.includes(`<h3>${q.name}</h3>`)) bad(path, `FAQ data question not visible on the page: ${q.name}`);
+    } catch { /* reported above */ }
+    for (const [, h2] of body.matchAll(/<h2[^>]*>([\s\S]*?)<\/h2>/g)) {
+      if (!/\?\s*$/.test(h2.replace(/<[^>]+>/g, '').trim())) bad(path, `heading is not a question a traveller would search: "${h2}"`);
+    }
+    if (/<h2[^>]*>[^<]*<\/h2>\s*(?:<h[23][\s>]|$)/.test(body)) bad(path, 'a heading has no text under it');
+    const internal = [...body.matchAll(/href="\/[^"]*"/g)].length;
+    if (internal < 2) bad(path, `only ${internal} internal link(s) in the post (need 2 or more)`);
+    if (!/href="https:\/\/(?!nilarahills\.com)[^"]+"/.test(body)) bad(path, 'no inline link to a source');
+    for (const k of ['cottageAc', 'cottageNonAc', 'aFrame']) {
+      const v = `₹${Number(cfg.rates[k]).toLocaleString('en-IN')}`;
+      if (body.includes(v)) bad(path, `quotes the resort tariff (${v}) — keep tariffs on the Cottages page`);
+    }
+  }
   const words = html.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/g, ' ').replace(/<[^>]+>/g, ' ').split(/\s+/).filter(Boolean).length;
   if (words < 300) warn.push(`${path}: only ${words} words — more useful text helps it rank`);
 }

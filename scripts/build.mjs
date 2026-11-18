@@ -7,12 +7,17 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 import { NAV, FAQ, PAGES, time12 } from '../src/content.mjs';
+import { allPosts, livePosts } from './blog-lib.mjs';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const DIST = join(ROOT, 'dist');
 const cfg = JSON.parse(readFileSync(join(ROOT, 'site.config.json'), 'utf8'));
 const { photos } = JSON.parse(readFileSync(join(ROOT, 'photos.json'), 'utf8'));
 const strict = process.argv.includes('--check');
+// --drafts also builds the posts that are not live yet, marked noindex and left out of every list, to preview them.
+const drafts = process.argv.includes('--drafts');
+const LIVE = livePosts();
+const LIVE_SLUGS = new Set(LIVE.map((p) => p.slug));
 const BASE = cfg.siteUrl.replace(/\/$/, '');
 const WIDTHS = [480, 960, 1600];
 
@@ -86,6 +91,14 @@ function helpers(page) {
     link: (path, text) => `<a href="${path}">${text}</a>`,
     cta: (cls = 'button', text = 'Check availability') => `<a class="${cls}" href="${enquireHref}"${cfg.whatsapp ? ' rel="noopener"' : ''}>${text} <span aria-hidden="true">→</span></a>`,
     addressLine,
+    // Link to another blog post only if it is live in this build; otherwise just the words (never a dead link).
+    post: (slug, text) => (LIVE_SLUGS.has(slug) ? `<a href="/blog/${slug}/">${text}</a>` : text),
+    // The list of live attraction guides, shown on the Places nearby page (the hub).
+    guides: () => {
+      const hub = LIVE.filter((p) => p.hub !== false);
+      if (!hub.length) return '';
+      return `<h2 id="guides">Guides to places near Mananthavady</h2><p>Longer guides with timings, rules and tips, checked against official sources.</p><div class="cards">${hub.map(postCard).join('')}</div>`;
+    },
     aside: (title, text) => `<aside class="aside"><h2>${title}</h2><p>${text}</p>${contactList()}<a class="button" href="#book">Send an enquiry <span aria-hidden="true">→</span></a></aside>`,
     enquiry,
   };
@@ -147,6 +160,62 @@ function resortData(pageImages) {
   return d;
 }
 
+// ── Blog ─────────────────────────────────────────────────────────────────────────────────────────────────────────
+const longDate = (d) => new Date(`${d}T00:00:00Z`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+function postCard(p) {
+  return `<div class="card"><span class="dist">${p.cardLabel || 'Guide'}</span><h3><a href="/blog/${p.slug}/">${p.h1}</a></h3><p>${p.excerpt}</p></div>`;
+}
+function postData(post, page, image) {
+  const modified = [post.published, post.checked].filter(Boolean).sort().at(-1);
+  return {
+    '@type': 'BlogPosting', '@id': `${abs(page.path)}#article`, headline: post.h1, description: post.description,
+    datePublished: post.published, dateModified: modified, inLanguage: 'en-IN', image: [image],
+    mainEntityOfPage: abs(page.path), keywords: post.keyword,
+    author: { '@type': 'Organization', name: `${cfg.shortName} team, ${cfg.operator}`, url: `${BASE}/blog/` },
+    publisher: { '@id': `${BASE}/#resort` },
+    isPartOf: { '@type': 'Blog', '@id': `${BASE}/blog/#blog`, name: `${cfg.shortName} travel guides`, url: `${BASE}/blog/` },
+  };
+}
+function postPage(post, isLive) {
+  const p = { ...post, published: post.published || post.publishDate };
+  return {
+    path: `/blog/${p.slug}/`, title: p.title, description: p.description, ogImage: p.ogImage || 'terrace',
+    crumb: p.crumb || p.h1, trail: [['Travel guides', '/blog/']], h1: p.h1, lead: p.lead, post: p, noindex: !isLive,
+    body: (h) => {
+      let body = p.body(h);
+      // The personal line is Ashwin's to write. Until he does, the placeholder never reaches a live page.
+      if (isLive) body = body.replace(/<p class="todo">[\s\S]*?<\/p>\s*/g, '');
+      const related = LIVE.filter((x) => x.slug !== p.slug).slice(0, 3);
+      return `
+    <div class="shell prose">
+      <article>
+        <p class="post-meta">By the ${esc(cfg.shortName)} team · ${isLive ? `Published <time datetime="${p.published}">${longDate(p.published)}</time>` : `<strong>Draft — scheduled for ${longDate(p.publishDate)}</strong>`} · Facts checked ${longDate(p.checked)}</p>
+        <div class="post-body">${body}</div>
+        ${p.faq?.length ? `<section class="post-faq"><h2>Quick answers</h2>${p.faq.map(([q, a]) => `<h3>${q}</h3><p>${a}</p>`).join('')}</section>` : ''}
+        <section class="post-sources"><h2>Sources</h2><p>Read on the dates shown. Timings, fees and rules change, so check again close to your trip.</p><ul>${p.sources.map(([t, u, d]) => `<li><a href="${u}" rel="noopener">${t}</a> — read ${longDate(d)}</li>`).join('')}</ul></section>
+        <div class="author-box"><b>Written by the ${esc(cfg.shortName)} team</b><p>${esc(cfg.shortName)} is a boutique resort ${cfg.distanceFromTown} from Mananthavady, run by ${esc(cfg.operator)}. We write these guides for guests planning days out in north Wayanad, using the official sources listed above. See ${h.link('/places-near-mananthavady/', 'places to visit near Mananthavady')} or ${h.link('/blog/', 'all travel guides')}.</p></div>
+        ${related.length ? `<section class="post-related"><h2>More travel guides</h2><div class="cards">${related.map(postCard).join('')}</div></section>` : ''}
+      </article>
+      ${h.aside('Stay near Mananthavady', `${esc(cfg.shortName)} is ${cfg.distanceFromTown} from Mananthavady town. Send your dates and number of guests, and we will confirm availability.`)}
+    </div>`;
+    },
+  };
+}
+const blogIndex = {
+  path: '/blog/', title: 'Wayanad Travel Guides from Mananthavady | Nilara Hills',
+  description: 'Guides to Kuruva Island, Thirunelli, Tholpetty and more around Mananthavady, Wayanad: timings, rules and tips, checked against official sources.',
+  ogImage: 'terrace', crumb: 'Travel guides', h1: 'Wayanad travel guides from Mananthavady',
+  lead: 'Practical guides to places around north Wayanad, written by the Nilara Hills team and checked against official sources.',
+  body: () => `
+    <div class="shell prose">
+      <div>
+        <p>Each guide lists where its facts come from and the date we checked them. Timings, fees and visitor limits change often in Wayanad, so check again before you travel.</p>
+        <div class="cards">${LIVE.map((p) => postCard(p).replace('</p></div>', `</p><p class="post-date">${longDate(p.published)}</p></div>`)).join('')}</div>
+      </div>
+      <aside class="aside"><h2>Stay near Mananthavady</h2><p>Nilara Hills is ${cfg.distanceFromTown} from Mananthavady town, close to Kuruva Island, Thirunelli and Tholpetty.</p><a class="button" href="#book">Send an enquiry <span aria-hidden="true">→</span></a></aside>
+    </div>`,
+};
+
 // ── Layout ─────────────────────────────────────────────────────────────────────────────────────────────────────────
 const css = readFileSync(join(ROOT, 'src', 'styles.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\s*\n\s*/g, '').trim();
 function nav(current) {
@@ -156,14 +225,20 @@ async function render(page) {
   const h = helpers(page);
   let body = page.body(h);
   if (!page.home) {
-    const head = `<section class="page-head"><div class="shell"><nav aria-label="Breadcrumb"><ol class="crumbs"><li><a href="/">Home</a></li><li aria-current="page">${esc(page.crumb)}</li></ol></nav><h1>${page.h1}</h1><p>${page.lead}</p></div></section>`;
+    const trail = (page.trail || []).map(([label, path]) => `<li><a href="${path}">${esc(label)}</a></li>`).join('');
+    const head = `<section class="page-head"><div class="shell"><nav aria-label="Breadcrumb"><ol class="crumbs"><li><a href="/">Home</a></li>${trail}<li aria-current="page">${esc(page.crumb)}</li></ol></nav><h1>${page.h1}</h1><p>${page.lead}</p></div></section>`;
     body = head + body + enquiry();
   }
   const og = await ogImage(page.ogImage);
   const pageImages = [...usedImages.get(page.path)].filter((k) => !IMG[k].logo).map((k) => abs(IMG[k].src));
   const graph = [{ '@type': 'WebSite', '@id': `${BASE}/#website`, url: `${BASE}/`, name: cfg.name, publisher: { '@id': `${BASE}/#resort` } }, resortData(pageImages.length ? pageImages : [abs(og)])];
   if (page.home) graph.push({ '@type': 'FAQPage', mainEntity: FAQ(cfg).map(([q, ans]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: ans } })) });
-  else graph.push({ '@type': 'BreadcrumbList', itemListElement: [{ '@type': 'ListItem', position: 1, name: 'Home', item: `${BASE}/` }, { '@type': 'ListItem', position: 2, name: page.crumb, item: abs(page.path) }] });
+  else {
+    const crumbs = [['Home', '/'], ...(page.trail || []), [page.crumb, page.path]];
+    graph.push({ '@type': 'BreadcrumbList', itemListElement: crumbs.map(([name, path], i) => ({ '@type': 'ListItem', position: i + 1, name, item: abs(path) })) });
+  }
+  if (page.post) graph.push(postData(page.post, page, abs(og)));
+  if (page.post?.faq?.length) graph.push({ '@type': 'FAQPage', mainEntity: page.post.faq.map(([q, ans]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: ans } })) });
   const hero = page.home ? IMG.hero : null;
   return `<!doctype html>
 <html lang="en-IN">
@@ -173,10 +248,10 @@ async function render(page) {
 <title>${esc(page.title)}</title>
 <meta name="description" content="${esc(page.description)}">
 <link rel="canonical" href="${abs(page.path)}">
-<meta name="robots" content="index, follow, max-image-preview:large">
+<meta name="robots" content="${page.noindex ? 'noindex, nofollow' : 'index, follow, max-image-preview:large'}">
 <meta name="theme-color" content="#17372c">
 <meta name="geo.region" content="IN-KL"><meta name="geo.placename" content="Mananthavady, Wayanad">${cfg.geo.lat && cfg.geo.lng ? `<meta name="geo.position" content="${cfg.geo.lat};${cfg.geo.lng}">` : ''}
-<meta property="og:type" content="website"><meta property="og:site_name" content="${esc(cfg.name)}"><meta property="og:locale" content="en_IN">
+<meta property="og:type" content="${page.post ? 'article' : 'website'}"><meta property="og:site_name" content="${esc(cfg.name)}"><meta property="og:locale" content="en_IN">
 <meta property="og:title" content="${esc(page.title)}"><meta property="og:description" content="${esc(page.description)}">
 <meta property="og:url" content="${abs(page.path)}"><meta property="og:image" content="${abs(og)}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="${esc(IMG[page.ogImage].alt)}">
 <meta name="twitter:card" content="summary_large_image">
@@ -200,7 +275,7 @@ ${hero ? `<link rel="preload" as="image" href="${hero.src}" imagesrcset="${hero.
 <footer class="footer"><div class="shell">
   <div class="footer-top">
     <div><a class="brand" href="/"><small>Nilara Hills Resort</small><strong>Nilara <em>Hills</em></strong></a><p class="footer-copy">A cottage resort with a swimming pool in Mananthavady, Wayanad, brought to you by Horizon Finder India.</p>${h.img('logo', { cls: 'nilarahills-logo' })}${h.img('hfLogo', { cls: 'hf-logo' })}</div>
-    <div class="footer-column"><b>Explore</b><a href="/">Home</a>${NAV.map((n) => `<a href="${n.path}">${({ Nearby: 'Places nearby', Groups: 'Group stays', Corporate: 'Corporate outings', Cottages: 'Cottages & tariff' })[n.label] || n.label}</a>`).join('')}<a href="/#faq">Questions</a></div>
+    <div class="footer-column"><b>Explore</b><a href="/">Home</a>${NAV.map((n) => `<a href="${n.path}">${({ Nearby: 'Places nearby', Groups: 'Group stays', Corporate: 'Corporate outings', Cottages: 'Cottages & tariff' })[n.label] || n.label}</a>`).join('')}${LIVE.length ? '<a href="/blog/">Travel guides</a>' : ''}<a href="/#faq">Questions</a></div>
     <div class="footer-column"><b>Reservations</b><a href="/#book">Send an enquiry</a>${cfg.phone ? `<a href="tel:${cfg.phone.replace(/[^\d+]/g, '')}">${esc(cfg.phone)}</a>` : ''}${cfg.whatsapp ? `<a href="https://wa.me/${cfg.whatsapp.replace(/\D/g, '')}" rel="noopener">WhatsApp ${esc(cfg.whatsapp)}</a>` : ''}<a href="mailto:${cfg.email}">${esc(cfg.email)}</a>${cfg.bookingUrl ? `<a href="${cfg.bookingUrl}" rel="noopener">Check availability</a>` : ''}</div>
     <div class="footer-column"><b>Find us</b><address><span>${addressLine()}</span>${cfg.mapsUrl ? `<a href="${cfg.mapsUrl}" rel="noopener">Google Maps →</a>` : ''}</address><span>Check-in ${time12(cfg.checkIn)} · Check-out ${time12(cfg.checkOut)}</span></div>
   </div>
@@ -222,13 +297,22 @@ for (const page of PAGES) {
   mkdirSync(dir, { recursive: true });
   writeFileSync(join(dir, 'index.html'), html);
 }
+// Blog: live posts, the blog index (only once a post is live) and, with --drafts, previews of the rest.
+const BLOG_PAGES = LIVE.length ? [blogIndex, ...LIVE.map((p) => postPage(p, true))] : [];
+const PREVIEWS = drafts ? allPosts().filter((p) => !LIVE_SLUGS.has(p.slug)).map((p) => postPage(p, false)) : [];
+for (const page of [...BLOG_PAGES, ...PREVIEWS]) {
+  const html = await render(page);
+  const dir = join(DIST, page.path);
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, 'index.html'), html);
+}
 const notFound = await render({ path: '/404', title: 'Page not found | Nilara Hills Resort, Wayanad', description: 'This page could not be found. Visit the Nilara Hills Resort home page.', ogImage: 'hero', crumb: 'Page not found', h1: 'This page could not be found', lead: 'The page may have moved. Start from the home page, or send us an enquiry below.', body: () => '' });
 writeFileSync(join(DIST, '404.html'), notFound.replace('<meta name="robots" content="index, follow, max-image-preview:large">', '<meta name="robots" content="noindex">').replace(/<link rel="canonical"[^>]*>\n/, ''));
 
 const today = new Date().toISOString().slice(0, 10);
 const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
-${PAGES.map((p) => `  <url><loc>${abs(p.path)}</loc><lastmod>${today}</lastmod>${[...usedImages.get(p.path)].filter((k) => !IMG[k].logo).map((k) => `<image:image><image:loc>${abs(IMG[k].src)}</image:loc></image:image>`).join('')}</url>`).join('\n')}
+${[...PAGES, ...BLOG_PAGES].map((p) => `  <url><loc>${abs(p.path)}</loc><lastmod>${today}</lastmod>${[...usedImages.get(p.path)].filter((k) => !IMG[k].logo).map((k) => `<image:image><image:loc>${abs(IMG[k].src)}</image:loc></image:image>`).join('')}</url>`).join('\n')}
 </urlset>
 `;
 writeFileSync(join(DIST, 'sitemap.xml'), sitemap);
@@ -237,7 +321,7 @@ writeFileSync(join(DIST, 'favicon.svg'), `<svg xmlns="http://www.w3.org/2000/svg
 await sharp(Buffer.from(readFileSync(join(DIST, 'favicon.svg')))).resize(180, 180).png().toFile(join(DIST, 'apple-touch-icon.png'));
 writeFileSync(join(DIST, '_headers'), `/images/*\n  Cache-Control: public, max-age=2592000\n/*.svg\n  Cache-Control: public, max-age=2592000\n`);
 
-console.log(`Built ${PAGES.length} pages, ${Object.keys(IMG).length} photos, sitemap.xml and robots.txt into dist/.`);
+console.log(`Built ${PAGES.length} pages, ${LIVE.length} live blog post(s)${drafts ? ` and ${PREVIEWS.length} draft preview(s) (noindex)` : ''}, ${Object.keys(IMG).length} photos, sitemap.xml and robots.txt into dist/.`);
 if (missing.length) {
   console.log(`\n⚠  Not filled in site.config.json yet (left off the site and out of Google's data): ${missing.join(', ')}.`);
   console.log('   Fill them so Google can match the website to your Google Business Profile, then build again.');

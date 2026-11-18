@@ -61,6 +61,22 @@ npm run deploy    # builds, checks, and publishes to nilarahills.com
    This is what puts Nilara Hills on the map results for "Wayanad stay".
 3. Test the structured data at search.google.com/test/rich-results with `https://nilarahills.com/`.
 
+## Blog (weekly, automatic)
+
+Travel guides live at `/blog/`. Ten posts are written and scheduled for Wednesdays (25 Nov 2026 to 27 Jan 2027).
+They live in `src/posts/`, and a post goes live only when the weekly task lists it in `src/published.json`.
+See `src/posts/README.md` for the publish gate and writing rules, and `research-notes/` for each post's sources.
+
+```powershell
+node scripts/blog.mjs status                 # the schedule
+.\scripts\publish-due.ps1 -DryRun          # what the weekly task would do today
+Get-Content .\publish-log.md -Tail 3         # what it did
+```
+
+The task "Nilara Blog Publisher" (set up once with `scripts\register-task.ps1`) runs every Wednesday at 13:45:
+it pulls from GitHub, publishes at most one due post, deploys, checks the live page (rolls back if it fails),
+then commits "publish: <slug>" and pushes.
+
 ## Changing the site later
 
 - **Text**: `src/content.mjs`, one block per page. Titles should stay under 65 characters and mention Wayanad or

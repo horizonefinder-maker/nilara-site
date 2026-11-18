@@ -3,6 +3,8 @@
 // "corporate outing") appear where they naturally belong, never stuffed. Facts and prices come from site.config.json.
 //
 // Each body(h) receives helpers:  h.img(key, opts)  h.cfg  h.link(path, text)  h.cta()  h.aside()  h.enquiry()
+//   h.post(slug, text)  (links a blog post only once it is live)  h.guides()  (the live attraction guides, for the hub)
+// Blog posts live in src/posts/ — see src/posts/README.md.
 
 export const NAV = [
   { path: '/cottages/', label: 'Cottages' },
@@ -259,6 +261,7 @@ export const PAGES = [
       <div>
         <p>Distances are approximate road distances from Mananthavady town; Nilara Hills is a further ${h.cfg.distanceFromTown}. Roads in Wayanad are narrow and winding, so allow extra time, and check opening days before you go — some sites close on certain days or limit visitors.</p>
         <div class="cards">${PLACES.map(placeCard).join('')}</div>
+        ${h.guides()}
         <h2>A simple two-day plan</h2>
         <h3>Day 1</h3>
         <p>Early morning at Kuruva Island, lunch back at the resort, then the pool and an evening visit to Valliyoorkavu Temple or the Pazhassi Tomb in town.</p>

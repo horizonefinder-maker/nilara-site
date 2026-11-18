@@ -1,0 +1,4 @@
+{
+  "_help": "Blog posts that are live, with the date each went live. The weekly publisher adds one line here; do not add posts by hand unless you mean to publish them. Remove a line and run npm run deploy to take a post down.",
+  "posts": {}
+}
